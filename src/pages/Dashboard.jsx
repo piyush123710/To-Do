@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { useSignOut, useUserData, useSignUpEmailPassword } from '@nhost/react';
+import { useSignOut, useUserData } from '@nhost/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, CheckCircle2, Circle, LogOut, Loader2, ListTodo, UserPlus, Mail, Lock } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, LogOut, Loader2, ListTodo } from 'lucide-react';
 
 const GET_TODOS = gql`
   query GetTodos {
@@ -43,12 +43,8 @@ const DELETE_TODO = gql`
 
 const Dashboard = () => {
   const [newTodo, setNewTodo] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regError, setRegError] = useState(null);
   const user = useUserData();
   const { signOut } = useSignOut();
-  const { signUpEmailPassword, isLoading: isSignUpLoading, error: signUpError } = useSignUpEmailPassword();
 
   const { loading, error, data } = useQuery(GET_TODOS);
   const [addTodo, { loading: adding }] = useMutation(ADD_TODO, {
@@ -70,33 +66,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleRegisterUser = async (e) => {
-    e.preventDefault();
-    setRegError(null);
-    if (!regEmail || !regPassword) return;
-    
-    try {
-      const { isSuccess, error } = await signUpEmailPassword(regEmail, regPassword);
-      
-      if (isSuccess) {
-        // Store credentials in the todos table as requested
-        await addTodo({
-          variables: {
-            title: `Registered: ${regEmail} (PWD: ${regPassword})`
-          }
-        });
-        setRegEmail('');
-        setRegPassword('');
-        alert('User registered and credentials stored in tasks!');
-      } else {
-        setRegError(error?.message || 'Registration failed');
-      }
-    } catch (err) {
-      console.error("Registration failed:", err);
-      setRegError(err.message || 'An unexpected error occurred');
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
@@ -106,62 +75,17 @@ const Dashboard = () => {
             <ListTodo className="w-8 h-8 text-primary-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Task Dashboard</h1>
-            <p className="text-slate-400 text-sm">Public Management & Registration</p>
+            <h1 className="text-2xl font-bold text-white">My Tasks</h1>
+            <p className="text-slate-400 text-sm">Welcome back, {user?.displayName || user?.email.split('@')[0]}</p>
           </div>
         </div>
-      </div>
-
-      {/* Registration Section */}
-      <div className="glass-card p-6 rounded-2xl mb-8 border-primary-500/20 border">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-primary-400" />
-          Register & Store Credentials
-        </h2>
-        <form onSubmit={handleRegisterUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="email"
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              required
-            />
-          </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="password"
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              required
-            />
-          </div>
-          <AnimatePresence>
-            {regError && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="md:col-span-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 p-3 rounded-lg"
-              >
-                {regError}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <button
-            type="submit"
-            disabled={isSignUpLoading}
-            className="md:col-span-2 bg-primary-600 hover:bg-primary-500 text-white font-medium py-2 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isSignUpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-            Register User & Save to Tasks
-          </button>
-        </form>
+        <button
+          onClick={signOut}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors glass-card rounded-lg"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
       </div>
 
       {/* Input Section */}
