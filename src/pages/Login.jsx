@@ -22,6 +22,14 @@ const Login = () => {
   const { signInEmailPassword, isLoading: isSignInLoading, isError: isSignInError, error: signInError } = useSignInEmailPassword();
   const { signUpEmailPassword, isLoading: isSignUpLoading, isError: isSignUpError, error: signUpError } = useSignUpEmailPassword();
   const [addTodo] = useMutation(ADD_TODO);
+  const [cooldown, setCooldown] = useState(0);
+
+  React.useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -49,7 +57,18 @@ const Login = () => {
   };
 
   const isLoading = isSignInLoading || isSignUpLoading;
-  const error = (isSignInError ? signInError : isSignUpError ? signUpError : null);
+  
+  const getErrorMessage = (err) => {
+    if (!err) return null;
+    const isRateLimit = err.message?.includes('429') || err.error?.includes('429') || err.status === 429;
+    if (isRateLimit) {
+      if (cooldown === 0) setCooldown(60);
+      return "Too many attempts. Please wait a minute before trying again.";
+    }
+    return err.message;
+  };
+
+  const errorMessage = getErrorMessage(isSignInError ? signInError : isSignUpError ? signUpError : null);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh]">
@@ -121,25 +140,27 @@ const Login = () => {
           </div>
 
           <AnimatePresence>
-            {error && (
+            {errorMessage && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 p-3 rounded-lg"
               >
-                {error.message}
+                {errorMessage}
               </motion.div>
             )}
           </AnimatePresence>
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-primary-600 hover:bg-primary-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-primary-900/20 transition-all flex items-center justify-center gap-2 group"
+            disabled={isLoading || cooldown > 0}
+            className="w-full bg-primary-600 hover:bg-primary-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-primary-900/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : cooldown > 0 ? (
+              <span>Wait {cooldown}s...</span>
             ) : isRegister ? (
               <>
                 <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
