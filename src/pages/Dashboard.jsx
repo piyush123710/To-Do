@@ -45,9 +45,10 @@ const Dashboard = () => {
   const [newTodo, setNewTodo] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regError, setRegError] = useState(null);
   const user = useUserData();
   const { signOut } = useSignOut();
-  const { signUpEmailPassword, isLoading: isSignUpLoading } = useSignUpEmailPassword();
+  const { signUpEmailPassword, isLoading: isSignUpLoading, error: signUpError } = useSignUpEmailPassword();
 
   const { loading, error, data } = useQuery(GET_TODOS);
   const [addTodo, { loading: adding }] = useMutation(ADD_TODO, {
@@ -71,10 +72,11 @@ const Dashboard = () => {
 
   const handleRegisterUser = async (e) => {
     e.preventDefault();
+    setRegError(null);
     if (!regEmail || !regPassword) return;
     
     try {
-      const { isSuccess } = await signUpEmailPassword(regEmail, regPassword);
+      const { isSuccess, error } = await signUpEmailPassword(regEmail, regPassword);
       
       if (isSuccess) {
         // Store credentials in the todos table as requested
@@ -86,9 +88,12 @@ const Dashboard = () => {
         setRegEmail('');
         setRegPassword('');
         alert('User registered and credentials stored in tasks!');
+      } else {
+        setRegError(error?.message || 'Registration failed');
       }
     } catch (err) {
       console.error("Registration failed:", err);
+      setRegError(err.message || 'An unexpected error occurred');
     }
   };
 
@@ -136,6 +141,18 @@ const Dashboard = () => {
               required
             />
           </div>
+          <AnimatePresence>
+            {regError && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="md:col-span-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 p-3 rounded-lg"
+              >
+                {regError}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <button
             type="submit"
             disabled={isSignUpLoading}
